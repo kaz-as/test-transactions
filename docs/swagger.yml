@@ -1,0 +1,99 @@
+consumes:
+    - application/json
+info:
+    title: Transactions
+    description: API for transaction processing
+    version: 1.0.0
+paths:
+    /tx:
+        post:
+            summary: create transaction
+            operationId: createTx
+            parameters:
+                - in: body
+                  name: tx
+                  schema:
+                      $ref: "#/definitions/Tx"
+            responses:
+                200:
+                    description: new tx initialized
+                    schema:
+                        $ref: "#/definitions/CreateTxSuccess"
+                default:
+                    description: generic error response
+                    schema:
+                        $ref: "#/definitions/error"
+    /user:
+        post:
+            summary: create user
+            operationId: createUser
+            parameters:
+                - in: body
+                  name: user
+                  schema:
+                      $ref: "#/definitions/CreateUser"
+            responses:
+                200:
+                    description: user created
+                    schema:
+                        $ref: "#/definitions/CreateUserSuccess"
+definitions:
+    Tx:
+        type: object
+        required:
+            - from
+            - to
+            - value
+        properties:
+            from:
+                type: string
+                pattern: ^[0-9a-f]{32}$
+            to:
+                type: string
+                pattern: ^[0-9a-f]{32}$
+            value:
+                type: integer
+                format: int64
+    CreateUser:
+        type: object
+        required:
+            - balance
+        properties:
+            balance:
+                type: integer
+                format: int64
+    error:
+        type: object
+        required:
+            - message
+        properties:
+            code:
+                type: integer
+                format: int64
+            message:
+                type: string
+    CreateTxSuccess:
+        type: object
+        required:
+            - new_balance_from
+            - new_balance_to
+        properties:
+            new_balance_from:
+                type: integer
+                format: int64
+            new_balance_to:
+                type: integer
+                format: int64
+    CreateUserSuccess:
+        type: object
+        required:
+            - id
+        properties:
+            id:
+                type: string
+
+produces:
+    - application/json
+schemes:
+    - http
+swagger: "2.0"

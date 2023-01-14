@@ -1,0 +1,12 @@
+http:
+  port: '8081'
+
+logger:
+  log_level: 'debug'
+
+db:
+  host: tx-pg
+  port: 5432
+  user: root
+  pass: root
+  name: tx

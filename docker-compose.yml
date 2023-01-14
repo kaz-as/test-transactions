@@ -1,0 +1,39 @@
+version: '3.1'
+
+services:
+  app:
+    build: ./docker/go
+    entrypoint: sleep infinity
+    ports:
+      - "8081:8081"
+    volumes:
+      - .:/backend
+    container_name: tx-go
+    hostname: tx-go
+    working_dir: /backend
+
+  swagger:
+    image: quay.io/goswagger/swagger
+    environment:
+      GOPATH: /go
+    volumes:
+      - .:/go/src/tx
+    working_dir: /go/src/tx
+    entrypoint: sleep infinity
+    hostname: tx-gen
+    container_name: tx-gen
+
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: tx
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./docker/postgres/pgdata:/var/lib/postgresql/data/pgdata
+    container_name: tx-pg
+    hostname: tx-pg
