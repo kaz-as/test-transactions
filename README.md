@@ -25,7 +25,8 @@ between DB-transactions that have no common accounts.
 * Create indices to SQL tables
 
 ## Run
-To read swagger documentation and try requests, run `make run` from `tx-go` container. Docs will be at http://localhost:8081/docs
+To read swagger documentation and try requests, run [docker-compose](docker-compose.yml), run `make run` from `tx-go` container.
+Docs will be at http://localhost:8081/docs
 
 ## Generate code from documentation
 Run `make gen` from `tx-gen` container.
