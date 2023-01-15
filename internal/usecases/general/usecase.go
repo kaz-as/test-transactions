@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/kaz-as/test-transactions/domain"
@@ -104,13 +105,27 @@ func (u *UseCase) CreateTx(ctx context.Context, tx *domain.Tx) (
 	}
 	defer u.rollback(dbTx)
 
-	from, err := u.usersRepo.GetForUpdate(ctxTimeout, dbTx, tx.From)
-	if err != nil {
-		return 0, 0, fmt.Errorf("get user (from) for update: %w", err)
-	}
-	to, err := u.usersRepo.GetForUpdate(ctxTimeout, dbTx, tx.To)
-	if err != nil {
-		return 0, 0, fmt.Errorf("get user (to) for update: %w", err)
+	var from, to *domain.User
+
+	// avoid deadlock
+	if strings.Compare(string(tx.From), string(tx.To)) < 1 {
+		from, err = u.usersRepo.GetForUpdate(ctxTimeout, dbTx, tx.From)
+		if err != nil {
+			return 0, 0, fmt.Errorf("get user (from) for update: %w", err)
+		}
+		to, err = u.usersRepo.GetForUpdate(ctxTimeout, dbTx, tx.To)
+		if err != nil {
+			return 0, 0, fmt.Errorf("get user (to) for update: %w", err)
+		}
+	} else {
+		to, err = u.usersRepo.GetForUpdate(ctxTimeout, dbTx, tx.To)
+		if err != nil {
+			return 0, 0, fmt.Errorf("get user (to) for update: %w", err)
+		}
+		from, err = u.usersRepo.GetForUpdate(ctxTimeout, dbTx, tx.From)
+		if err != nil {
+			return 0, 0, fmt.Errorf("get user (from) for update: %w", err)
+		}
 	}
 
 	if err = u.checkBusinessTx(tx, from, to); err != nil {
