@@ -31,6 +31,7 @@ type Tx struct {
 
 	// value
 	// Required: true
+	// Minimum: 0
 	Value *int64 `json:"value"`
 }
 
@@ -85,6 +86,10 @@ func (m *Tx) validateTo(formats strfmt.Registry) error {
 func (m *Tx) validateValue(formats strfmt.Registry) error {
 
 	if err := validate.Required("value", "body", m.Value); err != nil {
+		return err
+	}
+
+	if err := validate.MinimumInt("value", "body", *m.Value, 0, false); err != nil {
 		return err
 	}
 

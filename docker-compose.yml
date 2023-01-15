@@ -37,3 +37,4 @@ services:
       - ./docker/postgres/pgdata:/var/lib/postgresql/data/pgdata
     container_name: tx-pg
     hostname: tx-pg
+    command: ["postgres", "-c", "log_statement=all", "-c", "log_destination=stderr"]

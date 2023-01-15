@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS users
     balance BIGINT               NOT NULL
 );
 
+INSERT INTO users (id, balance) VALUES ('00000000000000000000000000000000', 1000000000);
+
 CREATE TABLE IF NOT EXISTS transactions
 (
     id        CHAR(64) PRIMARY KEY      NOT NULL,

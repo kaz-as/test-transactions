@@ -275,7 +275,8 @@ func init() {
       "properties": {
         "balance": {
           "type": "integer",
-          "format": "int64"
+          "format": "int64",
+          "minimum": 0
         }
       }
     },
@@ -308,7 +309,8 @@ func init() {
         },
         "value": {
           "type": "integer",
-          "format": "int64"
+          "format": "int64",
+          "minimum": 0
         }
       }
     },

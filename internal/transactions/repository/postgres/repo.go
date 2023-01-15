@@ -23,7 +23,7 @@ func NewRepo(log logger.Interface) domain.TxRepository {
 }
 
 func (t *txRepo) Store(ctx context.Context, tx *sql.Tx, transaction *domain.Tx) error {
-	query := `INSERT INTO transactions (id, "from", "to", value, timestamp) VALUES (?, ?, ?, ?, ?)`
+	query := `INSERT INTO transactions (id, "from", "to", value, timestamp) VALUES ($1, $2, $3, $4, $5);`
 
 	src := rand.New(rand.NewSource(time.Now().UnixNano() + int64(transaction.Value)))
 	uid, err := generateUID(src)
@@ -42,11 +42,14 @@ func (t *txRepo) Store(ctx context.Context, tx *sql.Tx, transaction *domain.Tx) 
 		}
 	}()
 
-	_, err = stmt.ExecContext(ctx, uid, string(transaction.From), string(transaction.To), int64(transaction.Value), time.Now())
+	timeNow := time.Now()
+	_, err = stmt.ExecContext(ctx, uid, string(transaction.From), string(transaction.To), int64(transaction.Value), timeNow)
 	if err != nil {
 		return fmt.Errorf("exec: %w", err)
 	}
 
+	transaction.ID = uid
+	transaction.Timestamp = timeNow
 	return nil
 }
 

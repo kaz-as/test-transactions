@@ -5,9 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
+	"time"
+
 	"github.com/kaz-as/test-transactions/domain"
 	"github.com/kaz-as/test-transactions/pkg/logger"
-	"time"
 )
 
 const PrimaryUserID = "00000000000000000000000000000000"
@@ -40,29 +42,52 @@ func (u *UseCase) CreateUser(ctx context.Context, user *domain.User) error {
 	ctxTimeout, cancel := context.WithTimeout(ctx, u.ctxTimeout)
 	defer cancel()
 
-	tx, err := u.db.BeginTx(ctxTimeout, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
+	dbTx, err := u.db.BeginTx(ctxTimeout, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
-	defer u.rollback(tx)
+	defer u.rollback(dbTx)
 
-	err = u.usersRepo.Store(ctxTimeout, tx, user)
+	primaryUser, err := u.usersRepo.GetForUpdate(ctxTimeout, dbTx, PrimaryUserID)
+	if err != nil {
+		return fmt.Errorf("get primary user: %w", err)
+	}
+
+	err = u.usersRepo.Store(ctxTimeout, dbTx, user)
 	if err != nil {
 		return fmt.Errorf("storing user: %w", err)
 	}
 
+	// before check, need to set balance as it was before the transaction
+	newUserBalance := user.Balance
+	user.Balance = 0
+	defer func() {
+		user.Balance = newUserBalance
+	}()
+
 	businessTx := &domain.Tx{
 		From:  PrimaryUserID,
 		To:    user.ID,
-		Value: user.Balance,
+		Value: newUserBalance,
 	}
 
-	err = u.txRepo.Store(ctxTimeout, tx, businessTx)
+	if err = u.checkBusinessTx(businessTx, primaryUser, user); err != nil {
+		return fmt.Errorf("check failed: %w", err)
+	}
+
+	primaryUser.Balance -= businessTx.Value
+
+	err = u.txRepo.Store(ctxTimeout, dbTx, businessTx)
 	if err != nil {
 		return fmt.Errorf("storing first tx for the user: %w", err)
 	}
 
-	return tx.Commit()
+	err = u.usersRepo.Update(ctxTimeout, dbTx, primaryUser)
+	if err != nil {
+		return fmt.Errorf("update primary user: %w", err)
+	}
+
+	return dbTx.Commit()
 }
 
 func (u *UseCase) CreateTx(ctx context.Context, tx *domain.Tx) (
@@ -88,13 +113,13 @@ func (u *UseCase) CreateTx(ctx context.Context, tx *domain.Tx) (
 		return 0, 0, fmt.Errorf("get user (to) for update: %w", err)
 	}
 
+	if err = u.checkBusinessTx(tx, from, to); err != nil {
+		return 0, 0, fmt.Errorf("check failed: %w", err)
+	}
+
 	err = u.txRepo.Store(ctxTimeout, dbTx, tx)
 	if err != nil {
 		return 0, 0, fmt.Errorf("transaction storing: %w", err)
-	}
-
-	if err = u.checkBusinessTx(tx, from, to); err != nil {
-		return 0, 0, fmt.Errorf("check failed: %w", err)
 	}
 
 	from.Balance -= tx.Value
@@ -114,12 +139,24 @@ func (u *UseCase) CreateTx(ctx context.Context, tx *domain.Tx) (
 }
 
 var (
+	ErrSame                = errors.New("to = from")
+	ErrNegativeTx          = errors.New("negative tx")
 	ErrInsufficientBalance = errors.New("insufficient balance")
+	ErrTooMuch             = errors.New("too much")
 )
 
-func (u *UseCase) checkBusinessTx(tx *domain.Tx, from *domain.User, _ *domain.User) error {
+func (u *UseCase) checkBusinessTx(tx *domain.Tx, from *domain.User, to *domain.User) error {
+	if from.ID == to.ID {
+		return fmt.Errorf("user id=%s: %w", from.ID, ErrSame)
+	}
+	if tx.Value < 0 {
+		return fmt.Errorf("value=%d: %w", tx.Value, ErrNegativeTx)
+	}
 	if from.Balance < tx.Value {
 		return fmt.Errorf("user id=%s: %w", from.ID, ErrInsufficientBalance)
+	}
+	if math.MaxInt64-tx.Value < to.Balance {
+		return fmt.Errorf("user id=%s: %w", to.ID, ErrTooMuch)
 	}
 
 	return nil

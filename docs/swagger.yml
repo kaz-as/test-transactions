@@ -58,6 +58,7 @@ definitions:
             value:
                 type: integer
                 format: int64
+                minimum: 0
     CreateUser:
         type: object
         required:
@@ -66,6 +67,7 @@ definitions:
             balance:
                 type: integer
                 format: int64
+                minimum: 0
     error:
         type: object
         required:

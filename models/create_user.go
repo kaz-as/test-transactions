@@ -21,6 +21,7 @@ type CreateUser struct {
 
 	// balance
 	// Required: true
+	// Minimum: 0
 	Balance *int64 `json:"balance"`
 }
 
@@ -41,6 +42,10 @@ func (m *CreateUser) Validate(formats strfmt.Registry) error {
 func (m *CreateUser) validateBalance(formats strfmt.Registry) error {
 
 	if err := validate.Required("balance", "body", m.Balance); err != nil {
+		return err
+	}
+
+	if err := validate.MinimumInt("balance", "body", *m.Balance, 0, false); err != nil {
 		return err
 	}
 

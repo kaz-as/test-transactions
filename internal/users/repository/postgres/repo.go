@@ -23,7 +23,7 @@ func NewRepo(log logger.Interface) domain.UsersRepository {
 }
 
 func (u *userRepo) Store(ctx context.Context, tx *sql.Tx, user *domain.User) error {
-	query := `INSERT INTO users (id, balance) VALUES (?, ?)`
+	query := `INSERT INTO users (id, balance) VALUES ($1, $2)`
 
 	src := rand.New(rand.NewSource(time.Now().UnixNano() + int64(user.Balance)))
 	uid, err := generateUID(src)
@@ -47,16 +47,17 @@ func (u *userRepo) Store(ctx context.Context, tx *sql.Tx, user *domain.User) err
 		return fmt.Errorf("exec: %w", err)
 	}
 
+	user.ID = uid
 	return nil
 }
 
 func (u *userRepo) GetForUpdate(ctx context.Context, tx *sql.Tx, userID domain.UserID) (*domain.User, error) {
-	query := `SELECT * FROM users WHERE id = ?`
+	query := `SELECT * FROM users WHERE id = $1 FOR NO KEY UPDATE`
 
 	row := tx.QueryRowContext(ctx, query, string(userID))
 
 	user := domain.User{}
-	err := row.Scan(&user.ID, &user.Balance)
+	err := row.Scan((*string)(&user.ID), (*int64)(&user.Balance))
 	if err != nil {
 		return nil, fmt.Errorf("scan: %w", err)
 	}
@@ -65,7 +66,7 @@ func (u *userRepo) GetForUpdate(ctx context.Context, tx *sql.Tx, userID domain.U
 }
 
 func (u *userRepo) Update(ctx context.Context, tx *sql.Tx, user *domain.User) error {
-	query := `UPDATE users SET balance = ? WHERE id = ?`
+	query := `UPDATE users SET balance = $1 WHERE id = $2`
 
 	stmt, err := tx.PrepareContext(ctx, query)
 	if err != nil {
@@ -78,9 +79,13 @@ func (u *userRepo) Update(ctx context.Context, tx *sql.Tx, user *domain.User) er
 		}
 	}()
 
-	_, err = stmt.ExecContext(ctx, int64(user.Balance), string(user.ID))
+	res, err := stmt.ExecContext(ctx, int64(user.Balance), string(user.ID))
 	if err != nil {
 		return fmt.Errorf("exec: %w", err)
+	}
+
+	if affected, _ := res.RowsAffected(); affected != 1 {
+		return fmt.Errorf("wierd behaviour: affected %d rows", affected)
 	}
 
 	return nil
