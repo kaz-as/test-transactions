@@ -82,6 +82,12 @@ func init() {
             "schema": {
               "$ref": "#/definitions/CreateUserSuccess"
             }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
           }
         }
       }
@@ -231,6 +237,12 @@ func init() {
             "description": "user created",
             "schema": {
               "$ref": "#/definitions/CreateUserSuccess"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
             }
           }
         }

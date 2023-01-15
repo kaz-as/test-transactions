@@ -40,7 +40,7 @@ func (u *UseCase) CreateUser(ctx context.Context, user *domain.User) error {
 	ctxTimeout, cancel := context.WithTimeout(ctx, u.ctxTimeout)
 	defer cancel()
 
-	tx, err := u.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
+	tx, err := u.db.BeginTx(ctxTimeout, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
@@ -73,7 +73,7 @@ func (u *UseCase) CreateTx(ctx context.Context, tx *domain.Tx) (
 	ctxTimeout, cancel := context.WithTimeout(ctx, u.ctxTimeout)
 	defer cancel()
 
-	dbTx, err := u.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
+	dbTx, err := u.db.BeginTx(ctxTimeout, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err != nil {
 		return 0, 0, fmt.Errorf("begin tx: %w", err)
 	}

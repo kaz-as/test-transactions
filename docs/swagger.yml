@@ -37,6 +37,10 @@ paths:
                     description: user created
                     schema:
                         $ref: "#/definitions/CreateUserSuccess"
+                default:
+                    description: generic error response
+                    schema:
+                        $ref: "#/definitions/error"
 definitions:
     Tx:
         type: object
